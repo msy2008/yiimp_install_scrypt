@@ -1,0 +1,93 @@
+# Source code from https://codereview.stackexchange.com/questions/55077/small-bash-script-to-start-and-stop-named-services #
+# Updated by Afiniel for Yiimpool use...                                                                                   #
+# Modifed by Saltpool                                                                                                      #
+############################################################################################################################
+
+#!/bin/sh -e
+main="screen -dmS main bash /var/web/main.sh"
+mainstop='screen -X -S main quit'
+loop2="screen -dmS loop2 bash /var/web/loop2.sh"
+loop2stop='screen -X -S loop2 quit'
+blocks="screen -dmS blocks bash /var/web/blocks.sh"
+blocksstop='screen -X -S blocks quit'
+debug="screen -dmS debug tail -f /var/log/yiimp/debug.log"
+debugstop='screen -X -S debug quit'
+
+startstop_service() {
+    cmd=$1
+    name=$2
+    sudo service $name $cmd
+}
+
+startstop_main() {
+    cmd=$1
+    case $cmd in
+        stop) $mainstop ;;
+        start) $main ;;
+        restart)
+            $mainstop
+            sleep 1
+            $main
+            ;;
+    esac
+}
+
+startstop_loop2() {
+    cmd=$1
+    case $cmd in
+        stop) $loop2stop ;;
+        start) $loop2 ;;
+        restart)
+            $loop2nstop
+            sleep 1
+            $loop2
+            ;;
+    esac
+}
+
+startstop_blocks() {
+    cmd=$1
+    case $cmd in
+        stop) $blocksstop ;;
+        start) $blocks ;;
+        restart)
+            $blocksstop
+            sleep 1
+            $blocks
+            ;;
+    esac
+}
+
+startstop_debug() {
+    cmd=$1
+    case $cmd in
+        stop) $debugstop ;;
+        start) $debug ;;
+        restart)
+            $debugstop
+            sleep 1
+            $debug
+            ;;
+    esac
+}
+
+
+case "$1" in
+    start|stop|restart) cmd=$1 ;;
+    *)
+        shift
+        servicenames=${@-servicenames}
+        echo "usage: $0 [start|stop|restart] $servicenames"
+        exit 1
+esac
+shift
+
+for name; do
+    case "$name" in
+        main) startstop_main $cmd ;;
+        loop2) startstop_loop2 $cmd ;;
+        blocks) startstop_blocks $cmd ;;
+        debug) startstop_debug $cmd ;;
+        *) startstop_service $cmd $name ;;
+    esac
+done
